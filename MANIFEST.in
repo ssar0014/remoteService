@@ -1,0 +1,4 @@
+include *.pkl
+include *.py
+include *.sqlite
+include LICENSE
