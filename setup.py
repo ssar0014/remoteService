@@ -3,7 +3,7 @@
 # its version, platform-dependencies and a whole lot more.
 from setuptools import setup, find_packages
 
-VERSION = '0.0.1'
+VERSION = '0.0.2'
 DESCRIPTION = 'Remote Service Package'
 
 with open("README.md", "r") as fh:
@@ -17,6 +17,7 @@ setup(
         version=VERSION,
         author="Subhasish Sarkar",
         author_email="subhasish.sarkar@gada.io",
+        url='https://github.com/ssar0014/remoteService',
         description=DESCRIPTION,
         long_description=LONG_DESCRIPTION,
         long_description_content_type="text/markdown",
@@ -32,6 +33,12 @@ setup(
                           'Marshmallow-SQLAlchemy',\
                           'mpld3',\
                           'wordcloud'], # add any additional packages that
+        # extra things that are only needed during development or testing
+        extras_require={
+            "dev": [
+                "pytest>=3.7",
+            ],
+        },
         # needs to be installed along with your package.
         keywords=['python', 'remote service'],
         classifiers= [

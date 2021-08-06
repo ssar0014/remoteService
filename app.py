@@ -80,7 +80,7 @@ def get_response():
     response = multiResponseSchema.dump(response)
     return(jsonify(response))
 
-
+# This bit of code runs the actual app
 # Run server
 if __name__ == "__main__":
     app.run(debug=True)
