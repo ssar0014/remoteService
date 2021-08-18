@@ -1,25 +1,52 @@
+import flask
+from flask import Flask, jsonify, request
+import os
+import datetime
+from datetime import datetime
+import pickle
 import requests
 import json
-import numpy as np
-import pandas as pd
+import ast
 
-url = 'https://internmatch-interns.gada.io/service/cache/read'
+# init app
+app = Flask(__name__)
 
-# using a premade file for now
-# will be using the searchBE later
-with open('codes_intern_ADL', 'r') as f:
-    interns_file = f.read()
-adl_interns_file_json = json.loads(interns_file)
-adl_interns_file_json_codes = adl_interns_file_json['codes']
+response_dict = {}
+apiRoute = "https://internmatch-staging2.gada.io/qwanda/baseentitys/search25/"
 
-# request part
-realm = '/internmatch'
-key = '/' + adl_interns_file_json_codes[0]
-url = url + realm + key
-headers = {'Content-Type': 'application/json',
-           'Accept': 'application/json',
-           'Authorization': 'Bearer eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJwU180dHhEMTJpUVJIZlJaLURRLTFaRWlGS3pWYkttVVFFWjdqOUdPaTZVIn0.eyJleHAiOjE2MjgyMTQyMjYsImlhdCI6MTYyNTYyMjIyNiwianRpIjoiMDkxMTk1YWYtMDJiOC00NGJiLWFkNmQtMjFlYTk3MzE1NmJjIiwiaXNzIjoiaHR0cHM6Ly9rZXljbG9hay5nYWRhLmlvL2F1dGgvcmVhbG1zL2ludGVybm1hdGNoIiwiYXVkIjoiYWNjb3VudCIsInN1YiI6IjA4NmNkZjFmLWE5OGYtNGU3My05ODI1LTBhNGNmZTJiYjk0MyIsInR5cCI6IkJlYXJlciIsImF6cCI6ImludGVybm1hdGNoIiwic2Vzc2lvbl9zdGF0ZSI6IjhmODlkNDIxLTNhOGMtNDFhYS1hNjJjLTcwNTU1YzExYTc2OSIsImFjciI6IjEiLCJhbGxvd2VkLW9yaWdpbnMiOlsiaHR0cDovL2FseXNvbjcuZ2VubnkubGlmZTo4MzgwIiwiaHR0cHM6Ly9pbnRlcm5tYXRjaC1hZGFtMi5nYWRhLmlvIiwiaHR0cHM6Ly9pbnRlcm5tYXRjaC1zZXR1cHRlc3QuZ2FkYS5pbyIsImh0dHBzOi8vaW50ZXJubWF0Y2gtZGV2LmdhZGEuaW8iLCJodHRwczovL2ludGVybm1hdGNoLXByb2QuZ2FkYS5pbyIsImh0dHBzOi8vYXBpLXNlcnZpY2UiLCJodHRwczovL2dlbm55dGVlci5nYWRhLmlvIiwiaHR0cHM6Ly9zY3JpcHQuZ29vZ2xlLmNvbSIsImh0dHBzOi8vaW50ZXJubWF0Y2gtZGVtby5nYWRhLmlvIiwiaHR0cHM6Ly92OC5nYWRhLmlvIiwiaHR0cHM6Ly9pbnRlcm5tYXRjaC5vdXRjb21lLWh1Yi5jb20iLCJodHRwOi8vbG9jYWxob3N0IiwiaHR0cDovL2FseXNvbjcuZ2VubnkubGlmZSIsImh0dHBzOi8vaW50ZXJubWF0Y2gtc3RhZ2luZy5nYWRhLmlvIiwiaHR0cHM6Ly9lcnN0d2hpbGUtd29sZi1nZW5ueS1hcGktc3ZjIiwiaHR0cHM6Ly9pbnRlcm5tYXRjaC10ZXN0aW5nMS5nYWRhLmlvIiwiaHR0cHM6Ly9pbnRlcm5tYXRjaC1zdGFnaW5nMi5nYWRhLmlvIiwiaHR0cHM6Ly9hcGktaW50ZXJubWF0Y2gub3V0Y29tZS1odWIuY29tIiwiaHR0cDovL2JyaWRnZTo4MDg4IiwiaHR0cDovL2ludGVybm1hdGNoLWludGVybnMuZ2FkYS5pbyIsImh0dHBzOi8vaHVic2VydmVyLmdhZGEuaW8iLCJodHRwczovL2FseXNvbnY5LmdhZGEuaW8iLCJodHRwczovL2ludGVybm1hdGNoLXN0YWdpbmctdGVzdC5nYWRhLmlvIiwiaHR0cHM6Ly9pbnRlcm5tYXRjaC1tb2JpbGUtbmV3LmdhZGEuaW8iLCJodHRwczovL2ludGVybm1hdGNoLWludGVybnMtbmV3LmdhZGEuaW8iLCJodHRwczovL2ludGVybm1hdGNoLWRyb3Bkb3duLmdhZGEuaW8iLCJodHRwczovL20uaW50ZXJubWF0Y2guaW8iLCJodHRwczovL2ludGVybm1hdGNoLXN0YWdpbmcub3V0Y29tZS1odWIuY29tIiwiaHR0cDovL2dhdGVrZWVwZXIuZ2FkYS5pbyIsImh0dHBzOi8vaW50ZXJubWF0Y2gtcGlwZWxpbmUuZ2FkYS5pbyIsImh0dHBzOi8vYWx5c29uNy5nZW5ueS5saWZlIiwiaHR0cHM6Ly9pbnRlcm5tYXRjaC1ub2RldGVzdC5nYWRhLmlvIiwiaHR0cHM6Ly9tLW5ldy5pbnRlcm5tYXRjaC5pbyIsImh0dHA6Ly9sb2NhbGhvc3Q6ODA4MCIsImh0dHBzOi8vbG9jYWxob3N0OjMwMDAiLCJodHRwOi8vbG9jYWxob3N0OjgyODAiLCJodHRwOi8vaW50ZXJubWF0Y2guZ2VubnkubGlmZSIsImh0dHBzOi8vaW50ZXJubWF0Y2gtbW9iaWxlLmdhZGEuaW8iLCJodHRwczovL2ludGVybm1hdGNoLXRlc3RpbmcuZ2FkYS5pbyIsImh0dHA6Ly9ydWxlc3NlcnZpY2U6ODA4MCIsImh0dHA6Ly9pbnRlcm5tYXRjaC5nZW5ueS5saWZlOjgzODAiLCJodHRwOi8vYWx5c29uLmdlbm55LmxpZmU6MzAwMCIsImh0dHA6Ly9sb2NhbC5jcm93dGVjaC5jb20uYXUiLCJodHRwOi8vYWx5c29uLmdlbm55LmxpZmUiLCJodHRwczovL2ludGVybm1hdGNoLWludGVybnMuZ2FkYS5pbyIsImh0dHBzOi8vaHR0cDoiLCJodHRwOi8vbWVzc2FnZXM6ODA4MCIsImh0dHBzOi8vaW50ZXJubWF0Y2guZ2VubnkubGlmZSIsImh0dHBzOi8vaW50ZXJubWF0Y2gtcGlwZXMuZ2FkYS5pbyIsImh0dHBzOi8vaW50ZXJubWF0Y2gtdGVzdGluZzIuZ2FkYS5pbyIsImh0dHA6Ly9sb2NhbGhvc3Q6MzAwMCIsImh0dHBzOi8vbG9jYWxob3N0OjgwODAiLCJodHRwOi8vYnJpZGdlLmdlbm55LmxpZmUiLCJodHRwOi8vaW50ZXJubWF0Y2gtc3RhZ2luZy5nYWRhLmlvIiwiaHR0cHM6Ly9pbnRlcm5tYXRjaC1pbmZpbmlzcGFuLmdhZGEuaW8iLCJodHRwOi8vaW50ZXJubWF0Y2gub3V0Y29tZS1odWIuY29tIl0sInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJ0ZXN0IiwiZGV2Iiwib2ZmbGluZV9hY2Nlc3MiLCJhZG1pbiIsInVtYV9hdXRob3JpemF0aW9uIiwidXNlciIsInN1cGVydmlzb3IiXX0sInJlc291cmNlX2FjY2VzcyI6eyJhY2NvdW50Ijp7InJvbGVzIjpbIm1hbmFnZS1hY2NvdW50IiwibWFuYWdlLWFjY291bnQtbGlua3MiLCJ2aWV3LXByb2ZpbGUiXX19LCJzY29wZSI6InByb2ZpbGUgZW1haWwiLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwibmFtZSI6IlVzZXIxIFVzZXIiLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJ0ZXN0dXNlckBnYWRhLmlvIiwiZ2l2ZW5fbmFtZSI6IlVzZXIxIiwiZmFtaWx5X25hbWUiOiJVc2VyIiwiZW1haWwiOiJ0ZXN0dXNlckBnYWRhLmlvIn0.T3NC0q5-rAhywxotHJ3MxYnOCIfQGmdoYfs4w83Va-KPjZk4uo7EU8B9G_j6_XvMFFk9tl8iBHmKntrXr_1Xt3F-JgI0ga2qFU6jrzYkFUT087HtHDYL-EVrIodzEjJs9abOgHbZDMyT8XppdLv8jgDPFIfvBQVOxANskg8m9KqpeRLCdKsh-DdRz6xxNI5kYOTtanIvpvFbas72EIhaRef3cd2sqicNuKsB9PYJm-op90qj59_Ofc6lbLJwLs5w3HyTtxEgmMNkJvDHmr-VXbKX72Q0uXdo2DtZ_G6Hz7K7bcgGq_1czqUrYG013PWVUG_hPLK9f5OGppPmCuiWTw'}
-# key = TOKEN
-r = requests.get(url, headers=headers)
-response = r.json()
-entity_intern = json.loads(response['value'])
+@app.route('/api/response', methods=['POST'])
+def get_response():
+    headers = dict(request.headers)
+
+    data = request.get_data().decode('utf8')
+    data = data.replace("\n", "")
+    data = data.replace(" ", "")
+
+    response_dict["searchBE"] = data
+    response_dict["headers"] = headers
+
+    return(f"Response: \n{response_dict}")
+
+@app.route('/api/look', methods=['GET'])
+def get_look():
+    return(f"SEARCH BASE ENTITY: \n{response_dict['searchBE']}\n AUTH TOKEN: \n{response_dict['headers']['Authorization']}")
+
+@app.route('/api/sendSearch', methods=['GET'])
+def get_search():
+    ### this is the search25 part
+    searchBE = response_dict["searchBE"]
+    authToken = response_dict["headers"]["Authorization"]
+    headers = {'Content-Type': 'application/json',\
+                'Accept': 'application/json',\
+                'Authorization': authToken}
+    result = requests.post(apiRoute,\
+                            headers=headers,\
+                            data=searchBE)
+    return(result.json())
+
+    return(result.text)
+
+# This bit of code runs the actual app
+# Run server
+if __name__ == "__main__":
+    app.run(debug=True)
