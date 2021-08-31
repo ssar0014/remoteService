@@ -12,7 +12,7 @@ import json
 Base = declarative_base()
 class Response(Base):
     __tablename__ = "Response"
-    id = Column('id', Integer, primary_key=True)
+    id = Column('id', Integer, primary_key=True, autoincrement=True)
     job_id = Column('job_id',String(80), unique = True, nullable=False)
     service_name = Column('service_name',String(80), unique = True, nullable=False)
     service_start_datetime = Column('service_start_datetime',DateTime(), nullable=False)
@@ -24,7 +24,7 @@ Base.metadata.create_all(bind = engine)
 
 # CRUD functionality
 # Create
-def add_entry(id, job_id, name, start, end, results):
+def add_entry(job_id, name, start, end, results):
     # this stuff will be coming from the API
     # will need to be parsed using a json deserializer
     # for now this is dummy data
@@ -32,7 +32,6 @@ def add_entry(id, job_id, name, start, end, results):
     Session = sessionmaker(bind = engine)
     session = Session()
     response = Response()
-    response.id = id
     response.job_id = job_id
     response.service_name = name
     response.service_start_datetime = start
@@ -50,7 +49,7 @@ def read_entry(id):
     query_results = None
     for result in results:
         if result.id == id:
-            query_results = (result.id, result.job_id, result.service_name, result.service_results)
+            query_results = (result.id, result.job_id, result.service_start_datetime, result.service_name, result.service_results)
             session.close()
             return query_results
     if query_results == None:
